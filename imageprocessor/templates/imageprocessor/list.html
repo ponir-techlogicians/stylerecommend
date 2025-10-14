@@ -1,0 +1,153 @@
+{% extends 'imageprocessor/base.html' %}
+
+{% block title %}Image Gallery - Style Recommend{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-images"></i> Image Gallery
+        </h1>
+        <p class="lead">View all your processed clothing images</p>
+    </div>
+</div>
+
+<div class="container my-5">
+    {% if processed_images %}
+        <div class="row">
+            {% for image in processed_images %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-img-top position-relative" style="height: 250px; overflow: hidden;">
+                            {% if image.processed_image %}
+                                <img src="{{ image.processed_image.url }}" 
+                                     class="card-img-top" 
+                                     alt="Processed {{ image.get_clothing_type_display }}"
+                                     style="height: 100%; object-fit: cover;">
+                            {% else %}
+                                <div class="d-flex align-items-center justify-content-center bg-light h-100">
+                                    {% if image.status == 'processing' %}
+                                        <div class="text-center">
+                                            <div class="processing-animation mx-auto mb-2"></div>
+                                            <small class="text-muted">Processing...</small>
+                                        </div>
+                                    {% elif image.status == 'failed' %}
+                                        <div class="text-center text-danger">
+                                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                                            <small>Processing Failed</small>
+                                        </div>
+                                    {% else %}
+                                        <div class="text-center text-muted">
+                                            <i class="fas fa-clock fa-2x mb-2"></i>
+                                            <small>Pending</small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Status Badge -->
+                            <span class="position-absolute top-0 end-0 m-2 badge 
+                                {% if image.status == 'completed' %}bg-success
+                                {% elif image.status == 'processing' %}bg-warning
+                                {% elif image.status == 'failed' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ image.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-tshirt"></i> {{ image.get_clothing_type_display }}
+                            </h6>
+                            <p class="card-text text-muted">
+                                <small>
+                                    <i class="fas fa-calendar"></i> {{ image.created_at|date:"M d, Y" }}
+                                    <br>
+                                    <i class="fas fa-clock"></i> {{ image.created_at|time:"H:i" }}
+                                </small>
+                            </p>
+                            
+                            {% if image.processing_duration %}
+                                <p class="card-text">
+                                    <small class="text-success">
+                                        <i class="fas fa-stopwatch"></i> 
+                                        {{ image.processing_duration.total_seconds|floatformat:1 }}s
+                                    </small>
+                                </p>
+                            {% endif %}
+                            
+                            <!-- Wardrobe Status -->
+                            {% if image.status == 'completed' %}
+                                {% if image.wardrobe_item %}
+                                    <p class="card-text">
+                                        <small class="text-success">
+                                            <i class="fas fa-check-circle"></i> In Wardrobe
+                                        </small>
+                                    </p>
+                                {% else %}
+                                    <p class="card-text">
+                                        <small class="text-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> Not in Wardrobe
+                                        </small>
+                                    </p>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="card-footer bg-transparent">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'imageprocessor:detail' image.id %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View Details
+                                </a>
+                                {% if image.processed_image %}
+                                    <a href="{{ image.processed_image.url }}" 
+                                       download 
+                                       class="btn btn-success btn-sm">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                {% endif %}
+                                {% if image.status == 'completed' and image.wardrobe_item %}
+                                    <a href="{% url 'imageprocessor:wardrobe_item_detail' image.wardrobe_item.id %}" 
+                                       class="btn btn-info btn-sm">
+                                        <i class="fas fa-tshirt"></i> View in Wardrobe
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination would go here if needed -->
+        
+    {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-images fa-5x text-muted"></i>
+            </div>
+            <h4 class="text-muted">No Images Yet</h4>
+            <p class="text-muted">Start by uploading your first clothing image!</p>
+            <a href="{% url 'imageprocessor:upload' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-upload"></i> Upload Your First Image
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh if any images are still processing
+{% for image in processed_images %}
+    {% if image.status == 'processing' or image.status == 'pending' %}
+        setTimeout(function() {
+            location.reload();
+        }, 5000);
+        break;
+    {% endif %}
+{% endfor %}
+</script>
+{% endblock %}

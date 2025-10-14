@@ -1,0 +1,282 @@
+{% extends 'imageprocessor/base.html' %}
+
+{% block title %}Saved Outfits - Style Recommend{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-bookmark"></i> Saved Outfits
+        </h1>
+        <p class="lead">Your favorite outfit combinations</p>
+    </div>
+</div>
+
+<div class="container my-5">
+    <!-- Filter Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter"></i> Filter Outfits
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="occasion" class="form-label">Occasion</label>
+                            <select name="occasion" id="occasion" class="form-select">
+                                <option value="">All Occasions</option>
+                                <option value="casual" {% if request.GET.occasion == 'casual' %}selected{% endif %}>Casual</option>
+                                <option value="formal" {% if request.GET.occasion == 'formal' %}selected{% endif %}>Formal</option>
+                                <option value="business" {% if request.GET.occasion == 'business' %}selected{% endif %}>Business</option>
+                                <option value="party" {% if request.GET.occasion == 'party' %}selected{% endif %}>Party</option>
+                                <option value="sport" {% if request.GET.occasion == 'sport' %}selected{% endif %}>Sport</option>
+                                <option value="evening" {% if request.GET.occasion == 'evening' %}selected{% endif %}>Evening</option>
+                                <option value="weekend" {% if request.GET.occasion == 'weekend' %}selected{% endif %}>Weekend</option>
+                                <option value="travel" {% if request.GET.occasion == 'travel' %}selected{% endif %}>Travel</option>
+                                <option value="date" {% if request.GET.occasion == 'date' %}selected{% endif %}>Date</option>
+                                <option value="work" {% if request.GET.occasion == 'work' %}selected{% endif %}>Work</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="season" class="form-label">Season</label>
+                            <select name="season" id="season" class="form-select">
+                                <option value="">All Seasons</option>
+                                <option value="spring" {% if request.GET.season == 'spring' %}selected{% endif %}>Spring</option>
+                                <option value="summer" {% if request.GET.season == 'summer' %}selected{% endif %}>Summer</option>
+                                <option value="fall" {% if request.GET.season == 'fall' %}selected{% endif %}>Fall</option>
+                                <option value="winter" {% if request.GET.season == 'winter' %}selected{% endif %}>Winter</option>
+                                <option value="all" {% if request.GET.season == 'all' %}selected{% endif %}>All Season</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Apply Filters
+                            </button>
+                            <a href="{% url 'imageprocessor:saved_outfits' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saved Outfits -->
+    {% if outfits %}
+        <div class="row">
+            <div class="col-12">
+                <h3>
+                    <i class="fas fa-star"></i> Your Outfits
+                    <span class="badge bg-primary">{{ outfits|length }}</span>
+                </h3>
+            </div>
+        </div>
+
+        <div class="row">
+            {% for outfit in outfits %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ outfit.name }}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar"></i> {{ outfit.get_occasion_display }}
+                                <i class="fas fa-leaf ms-2"></i> {{ outfit.get_season_display }}
+                            </small>
+                        </div>
+                        
+                        <div class="card-body">
+                            <!-- Outfit Items -->
+                            <div class="mb-3">
+                                <h6 class="text-muted">Items:</h6>
+                                {% for item in outfit.items.all %}
+                                    <div class="d-flex align-items-center mb-1">
+                                        {% if item.get_image_url %}
+                                            <img src="{{ item.get_image_url }}" alt="{{ item.name }}" class="me-2" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;">
+                                        {% endif %}
+                                        <small>{{ item.name }} ({{ item.get_color_display }})</small>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Style Description -->
+                            {% if outfit.style_description %}
+                                <div class="mb-3">
+                                    <h6 class="text-muted">Description:</h6>
+                                    <p class="small">{{ outfit.style_description }}</p>
+                                </div>
+                            {% endif %}
+
+                            <!-- Style Tags -->
+                            {% if outfit.style_tags %}
+                                <div class="mb-3">
+                                    <h6 class="text-muted">Tags:</h6>
+                                    {% for tag in outfit.style_tags %}
+                                        <span class="badge bg-secondary me-1">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <!-- Rating -->
+                            {% if outfit.rating %}
+                                <div class="mb-3">
+                                    <h6 class="text-muted">Your Rating:</h6>
+                                    <div class="rating">
+                                        {% for i in "12345" %}
+                                            <i class="fas fa-star{% if forloop.counter > outfit.rating %}-o{% endif %} text-warning"></i>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Confidence Score -->
+                            <div class="mb-3">
+                                <h6 class="text-muted">AI Confidence:</h6>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ outfit.confidence_score|floatformat:0 }}%"
+                                         aria-valuenow="{{ outfit.confidence_score|floatformat:0 }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ outfit.confidence_score|floatformat:1 }}/1.0</small>
+                            </div>
+
+                            <!-- Wear Count -->
+                            {% if outfit.wear_count > 0 %}
+                                <div class="mb-3">
+                                    <h6 class="text-muted">Worn:</h6>
+                                    <p class="small">{{ outfit.wear_count }} time{{ outfit.wear_count|pluralize }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-footer">
+                            <div class="btn-group w-100" role="group">
+                                <a href="{% url 'imageprocessor:outfit_detail' outfit.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-warning rate-outfit" data-outfit-id="{{ outfit.id }}">
+                                    <i class="fas fa-star"></i> Rate
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="shareOutfit('{{ outfit.name }}')">
+                                    <i class="fas fa-share"></i> Share
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-bookmark fa-5x text-muted mb-3"></i>
+            <h4>No saved outfits yet</h4>
+            <p class="text-muted">Start by generating some outfit recommendations!</p>
+            <a href="{% url 'imageprocessor:outfit_recommendations' %}" class="btn btn-primary">
+                <i class="fas fa-magic"></i> Get Recommendations
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Rating Modal -->
+<div class="modal fade" id="ratingModal" tabindex="-1" aria-labelledby="ratingModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ratingModalLabel">Rate Outfit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="ratingForm">
+                    <input type="hidden" id="outfitId" name="outfit_id">
+                    <div class="mb-3">
+                        <label for="rating" class="form-label">Rating (1-5 stars)</label>
+                        <select class="form-select" id="rating" name="rating" required>
+                            <option value="">Select rating...</option>
+                            <option value="1">1 Star - Poor</option>
+                            <option value="2">2 Stars - Fair</option>
+                            <option value="3">3 Stars - Good</option>
+                            <option value="4">4 Stars - Very Good</option>
+                            <option value="5">5 Stars - Excellent</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitRating">Submit Rating</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Rate outfit functionality
+    document.querySelectorAll('.rate-outfit').forEach(button => {
+        button.addEventListener('click', function() {
+            const outfitId = this.dataset.outfitId;
+            document.getElementById('outfitId').value = outfitId;
+            
+            const modal = new bootstrap.Modal(document.getElementById('ratingModal'));
+            modal.show();
+        });
+    });
+
+    // Submit rating
+    document.getElementById('submitRating').addEventListener('click', function() {
+        const outfitId = document.getElementById('outfitId').value;
+        const rating = document.getElementById('rating').value;
+        
+        if (!rating) {
+            alert('Please select a rating.');
+            return;
+        }
+        
+        fetch(`/imageprocessor/api/rate-outfit/${outfitId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `rating=${rating}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Outfit rated successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while rating the outfit.');
+        });
+    });
+});
+
+function shareOutfit(outfitName) {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Check out this outfit recommendation!',
+            text: `I found a great outfit: ${outfitName}`,
+            url: window.location.href
+        });
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(`${outfitName} - ${window.location.href}`).then(() => {
+            alert('Outfit link copied to clipboard!');
+        });
+    }
+}
+</script>
+{% endblock %}

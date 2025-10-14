@@ -1,0 +1,45 @@
+<!-- Mannequin Image Display Snippet -->
+{% if mannequin_image_data %}
+<div class="mannequin-section">
+    <h3>Outfit on Mannequin</h3>
+    <div class="mannequin-image-container">
+        <img src="data:image/png;base64,{{ mannequin_image_data }}" 
+             alt="Outfit displayed on mannequin" 
+             class="mannequin-image"
+             style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+    </div>
+    {% if mannequin_analysis %}
+    <p class="mannequin-description">{{ mannequin_analysis }}</p>
+    {% endif %}
+</div>
+
+<style>
+.mannequin-section {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.mannequin-image-container {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.mannequin-image {
+    transition: transform 0.3s ease;
+}
+
+.mannequin-image:hover {
+    transform: scale(1.02);
+}
+
+.mannequin-description {
+    font-style: italic;
+    color: #6c757d;
+    text-align: center;
+    margin-top: 10px;
+}
+</style>
+{% endif %}

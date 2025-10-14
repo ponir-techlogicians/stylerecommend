@@ -1,0 +1,291 @@
+{% extends 'imageprocessor/base.html' %}
+
+{% block title %}{{ item.name }} - Style Recommend{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-tshirt"></i> {{ item.name }}
+        </h1>
+        <p class="lead">{{ item.get_category_display }} • {{ item.get_color_display }}</p>
+    </div>
+</div>
+
+<div class="container my-5">
+    <div class="row">
+        <!-- Item Images -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-images"></i> Images
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h6>Original:</h6>
+                            {% if item.get_original_image_url %}
+                                <img src="{{ item.get_original_image_url }}" class="img-fluid rounded" alt="Original">
+                            {% else %}
+                                <div class="bg-light p-4 text-center rounded">
+                                    <i class="fas fa-image fa-2x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-6">
+                            <h6>Processed:</h6>
+                            {% if item.get_image_url %}
+                                <img src="{{ item.get_image_url }}" class="img-fluid rounded" alt="Processed">
+                            {% else %}
+                                <div class="bg-light p-4 text-center rounded">
+                                    <i class="fas fa-image fa-2x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item Details -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Item Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>Name:</strong></td>
+                            <td>{{ item.name }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Category:</strong></td>
+                            <td>{{ item.get_category_display }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Color:</strong></td>
+                            <td>{{ item.get_color_display }}</td>
+                        </tr>
+                        {% if item.brand %}
+                            <tr>
+                                <td><strong>Brand:</strong></td>
+                                <td>{{ item.brand }}</td>
+                            </tr>
+                        {% endif %}
+                        {% if item.size %}
+                            <tr>
+                                <td><strong>Size:</strong></td>
+                                <td>{{ item.size }}</td>
+                            </tr>
+                        {% endif %}
+                        {% if item.material %}
+                            <tr>
+                                <td><strong>Material:</strong></td>
+                                <td>{{ item.material }}</td>
+                            </tr>
+                        {% endif %}
+                        <tr>
+                            <td><strong>Occasion:</strong></td>
+                            <td>{{ item.get_occasion_display }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Season:</strong></td>
+                            <td>{{ item.get_season_display }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Added:</strong></td>
+                            <td>{{ item.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Worn:</strong></td>
+                            <td>{{ item.wear_count }} times</td>
+                        </tr>
+{#                        {% if item.last_worn %}#}
+{#                            <tr>#}
+{#                                <td><strong>Last Worn:</strong></td>#}
+{#                                <td>{{ item.last_worn|date:"M d, Y" }}</td>#}
+{#                            </tr>#}
+{#                        {% endif %}#}
+                    </table>
+
+{#                    <div class="d-grid gap-2">#}
+{#                        <a href="{% url 'imageprocessor:wardrobe_item_edit' item.id %}" class="btn btn-primary">#}
+{#                            <i class="fas fa-edit"></i> Edit Item#}
+{#                        </a>#}
+{#                        <button type="button" class="btn btn-outline-info" id="analyze-item" data-item-id="{{ item.id }}">#}
+{#                            <i class="fas fa-brain"></i> AI Analysis#}
+{#                        </button>#}
+{#                        <button type="button" class="btn btn-outline-danger toggle-favorite" data-item-id="{{ item.id }}">#}
+{#                            <i class="fas fa-heart{% if not item.is_favorite %}-broken{% endif %}"></i>#}
+{#                            {% if item.is_favorite %}Remove from Favorites{% else %}Add to Favorites{% endif %}#}
+{#                        </button>#}
+{#                    </div>#}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Analysis Section -->
+{#    {% if item.style_description or item.style_tags or item.color_palette %}#}
+{#        <div class="row mt-4">#}
+{#            <div class="col-12">#}
+{#                <div class="card">#}
+{#                    <div class="card-header">#}
+{#                        <h5 class="mb-0">#}
+{#                            <i class="fas fa-brain"></i> AI Analysis#}
+{#                        </h5>#}
+{#                    </div>#}
+{#                    <div class="card-body">#}
+{#                        {% if item.style_description %}#}
+{#                            <div class="mb-3">#}
+{#                                <h6>Style Description:</h6>#}
+{#                                <p>{{ item.style_description }}</p>#}
+{#                            </div>#}
+{#                        {% endif %}#}
+{##}
+{#                        {% if item.style_tags %}#}
+{#                            <div class="mb-3">#}
+{#                                <h6>Style Tags:</h6>#}
+{#                                {% for tag in item.style_tags %}#}
+{#                                    <span class="badge bg-secondary me-1">{{ tag }}</span>#}
+{#                                {% endfor %}#}
+{#                            </div>#}
+{#                        {% endif %}#}
+{##}
+{#                        {% if item.color_palette %}#}
+{#                            <div class="mb-3">#}
+{#                                <h6>Color Palette:</h6>#}
+{#                                {% for color in item.color_palette %}#}
+{#                                    <span class="badge bg-primary me-1">{{ color }}</span>#}
+{#                                {% endfor %}#}
+{#                            </div>#}
+{#                        {% endif %}#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#    {% endif %}#}
+
+    <!-- Outfits with this Item -->
+    {% if outfits_with_item %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-star"></i> Outfits with this Item
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for outfit in outfits_with_item %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ outfit.name }}</h6>
+                                            <p class="card-text">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar"></i> {{ outfit.get_occasion_display }}
+                                                    <br>
+                                                    <i class="fas fa-leaf"></i> {{ outfit.get_season_display }}
+                                                    <br>
+                                                    <i class="fas fa-star"></i> {{ outfit.confidence_score|floatformat:1 }}/1.0
+                                                </small>
+                                            </p>
+                                            <a href="{% url 'imageprocessor:outfit_detail' outfit.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View Outfit
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle favorite functionality
+    document.querySelector('.toggle-favorite').addEventListener('click', function() {
+        const itemId = this.dataset.itemId;
+        const heartIcon = this.querySelector('i');
+        const button = this;
+        
+        fetch(`/imageprocessor/api/toggle-favorite/${itemId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.is_favorite) {
+                    heartIcon.className = 'fas fa-heart';
+                    button.innerHTML = '<i class="fas fa-heart"></i> Remove from Favorites';
+                    button.classList.remove('btn-outline-danger');
+                    button.classList.add('btn-danger');
+                } else {
+                    heartIcon.className = 'fas fa-heart-broken';
+                    button.innerHTML = '<i class="fas fa-heart-broken"></i> Add to Favorites';
+                    button.classList.remove('btn-danger');
+                    button.classList.add('btn-outline-danger');
+                }
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the item.');
+        });
+    });
+
+    // AI Analysis functionality
+    document.querySelector('#analyze-item').addEventListener('click', function() {
+        const itemId = this.dataset.itemId;
+        const button = this;
+        
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+        button.disabled = true;
+        
+        fetch(`/imageprocessor/api/analyze-item/${itemId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Item analyzed successfully! The page will refresh to show the results.');
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+                button.innerHTML = '<i class="fas fa-brain"></i> AI Analysis';
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while analyzing the item.');
+            button.innerHTML = '<i class="fas fa-brain"></i> AI Analysis';
+            button.disabled = false;
+        });
+    });
+});
+</script>
+{% endblock %}

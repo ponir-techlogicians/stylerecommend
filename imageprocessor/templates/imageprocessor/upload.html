@@ -1,0 +1,166 @@
+{% extends 'imageprocessor/base.html' %}
+
+{% block title %}Upload Image - Style Recommend{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-magic"></i> AI Image Processor
+        </h1>
+        <p class="lead">Transform your clothing photos into professional product images</p>
+    </div>
+</div>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-upload"></i> Upload Your Clothing Image
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="clothing_type" class="form-label">
+                                <strong>Clothing Type</strong>
+                            </label>
+                            <select class="form-select" id="clothing_type" name="clothing_type" required>
+                                <option value="">Select clothing type...</option>
+                                <option value="jacket">Jacket</option>
+                                <option value="shirt">Shirt</option>
+                                <option value="tshirt">Tshirt</option>
+                                <option value="pants">Pants</option>
+                                <option value="dress">Dress</option>
+                                <option value="sweater">Sweater</option>
+                                <option value="hoodie">Hoodie</option>
+                                <option value="coat">Coat</option>
+                                <option value="blouse">Blouse</option>
+                                <option value="skirt">Skirt</option>
+                                <option value="shorts">Shorts</option>
+                                <option value="shoes">Shoes</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <div class="form-text">Choose the type of clothing in your image - AI will optimize the prompt accordingly</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="image" class="form-label">
+                                <strong>Upload Image</strong>
+                            </label>
+                            <input type="file" class="form-control" id="image" name="image" accept="image/*" required>
+                            <div class="form-text">
+                                Supported formats: JPG, PNG, GIF, BMP, WebP (Max 10MB)
+                                <br><small class="text-muted">Note: Images are automatically converted to PNG for processing</small>
+                            </div>
+                        </div>
+
+                        <!-- Image Preview -->
+                        <div class="mb-4" id="imagePreview" style="display: none;">
+                            <label class="form-label"><strong>Preview</strong></label>
+                            <div class="text-center">
+                                <img id="previewImg" class="image-preview" alt="Preview">
+                            </div>
+                        </div>
+
+                        <!-- Processing Info -->
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> What we'll do:</h6>
+                            <ul class="mb-0">
+                                <li>Smooth out wrinkles and flatten the garment</li>
+                                <li>Remove the background and place on pure white</li>
+                                <li>Make it look like a professional product photo</li>
+                                <li>Maintain the natural shape of the clothing</li>
+                                <li><strong>Automatically add to your wardrobe</strong> for outfit recommendations</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="fas fa-magic"></i> Process Image
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Features Section -->
+            <div class="row mt-5">
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-wand-magic-sparkles fa-3x text-primary mb-3"></i>
+                            <h5>AI Processing</h5>
+                            <p class="text-muted">Advanced AI technology to enhance your clothing images</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-clock fa-3x text-success mb-3"></i>
+                            <h5>Fast Results</h5>
+                            <p class="text-muted">Get professional results in seconds, not hours</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-shield-alt fa-3x text-warning mb-3"></i>
+                            <h5>Secure</h5>
+                            <p class="text-muted">Your images are processed securely and privately</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const imageInput = document.getElementById('image');
+    const previewDiv = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('uploadForm');
+
+    // Handle image preview
+    imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewDiv.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            previewDiv.style.display = 'none';
+        }
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        submitBtn.innerHTML = '<span class="processing-animation"></span> Processing...';
+        submitBtn.disabled = true;
+    });
+
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+});
+</script>
+{% endblock %}

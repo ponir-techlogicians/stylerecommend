@@ -1,0 +1,247 @@
+{% extends 'imageprocessor/base.html' %}
+
+{% block title %}Outfit Recommendations - Style Recommend{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-magic"></i> Outfit Recommendations
+        </h1>
+        <p class="lead">AI-powered style suggestions from your wardrobe</p>
+    </div>
+</div>
+
+<div class="container my-5">
+    <!-- Search Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog"></i> Recommendation Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            {{ search_form.occasion.label_tag }}
+                            {{ search_form.occasion }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ search_form.season.label_tag }}
+                            {{ search_form.season }}
+                        </div>
+                        <div class="col-md-4" style="display: none;">
+{#                            {{ search_form.max_outfits.label_tag }}#}
+{#                            {{ search_form.max_outfits }}#}
+                            <input name="max_outfits" value="1">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-magic"></i> Generate Recommendations
+                            </button>
+                            <a href="{% url 'imageprocessor:saved_outfits' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-bookmark"></i> View Saved Outfits
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outfit Recommendations -->
+    {% if outfits %}
+        <div class="row">
+            <div class="col-12">
+                <h3>
+                    <i class="fas fa-star"></i> Recommended Outfits
+                    <span class="badge bg-success">{{ outfits|length }}</span>
+                </h3>
+            </div>
+        </div>
+
+        <!-- Composite Flat-lay Image -->
+        {% if composite_image_data %}
+            <div class="row justify-content-center mb-4">
+                <div class="col-12">
+                    <h4 class="text-center mb-3">
+                        <i class="fas fa-th-large"></i> Flat-lay View
+                    </h4>
+                    <div class="text-center">
+                        <img src="data:image/png;base64,{{ composite_image_data|safe }}" 
+                             alt="Outfit Recommendations" 
+                             class="img-fluid" 
+                             style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Mannequin Image -->
+        {% if mannequin_image_data %}
+            <div class="row justify-content-center mb-4">
+                <div class="col-12">
+                    <h4 class="text-center mb-3">
+                        <i class="fas fa-user"></i> Mannequin Display
+                    </h4>
+                    <div class="text-center">
+                        <img src="data:image/png;base64,{{ mannequin_image_data|safe }}" 
+                             alt="Outfit on Mannequin" 
+                             class="img-fluid" 
+                             style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                    </div>
+                    {% if mannequin_analysis %}
+                        <p class="text-muted text-center mt-2">
+                            <i class="fas fa-info-circle"></i> {{ mannequin_analysis }}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Overall Analysis -->
+{#        {% if overall_analysis %}#}
+{#            <div class="row justify-content-center mb-4">#}
+{#                <div class="col-12">#}
+{#                    <div class="card">#}
+{#                        <div class="card-header">#}
+{#                            <h5 class="mb-0">#}
+{#                                <i class="fas fa-brain"></i> AI Analysis#}
+{#                            </h5>#}
+{#                        </div>#}
+{#                        <div class="card-body">#}
+{#                            <p class="mb-0">{{ overall_analysis }}</p>#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#        {% endif %}#}
+
+        {% if not composite_image_data and not mannequin_image_data %}
+            <!-- Fallback: Show individual outfit cards if no composite image -->
+            <div class="row">
+                {% for outfit in outfits %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">{{ outfit.name }}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i> {{ outfit.occasion|title }}
+                                    <i class="fas fa-leaf ms-2"></i> {{ outfit.season|title }}
+                                </small>
+                            </div>
+                            
+                            <div class="card-body">
+                                <!-- Outfit Items -->
+                                <div class="row mb-3">
+                                    {% if outfit.tops %}
+                                        <div class="col-12 mb-2">
+                                            <h6 class="text-muted">Tops:</h6>
+                                            {% for top in outfit.tops %}
+                                                <div class="d-flex align-items-center mb-1">
+                                                    {% if top.get_image_url %}
+                                                        <img src="{{ top.get_image_url }}" alt="{{ top.name }}" class="me-2" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;">
+                                                    {% endif %}
+                                                    <small>{{ top.name }} ({{ top.get_color_display }})</small>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+
+                                    {% if outfit.bottoms %}
+                                        <div class="col-12 mb-2">
+                                            <h6 class="text-muted">Bottoms:</h6>
+                                            {% for bottom in outfit.bottoms %}
+                                                <div class="d-flex align-items-center mb-1">
+                                                    {% if bottom.get_image_url %}
+                                                        <img src="{{ bottom.get_image_url }}" alt="{{ bottom.name }}" class="me-2" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;">
+                                                    {% endif %}
+                                                    <small>{{ bottom.name }} ({{ bottom.get_color_display }})</small>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+
+                                    {% if outfit.shoes %}
+                                        <div class="col-12 mb-2">
+                                            <h6 class="text-muted">Shoes:</h6>
+                                            {% for shoe in outfit.shoes %}
+                                                <div class="d-flex align-items-center mb-1">
+                                                    {% if shoe.get_image_url %}
+                                                        <img src="{{ shoe.get_image_url }}" alt="{{ shoe.name }}" class="me-2" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;">
+                                                    {% endif %}
+                                                    <small>{{ shoe.name }} ({{ shoe.get_color_display }})</small>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-magic fa-5x text-muted mb-3"></i>
+            <h4>No outfit recommendations yet</h4>
+            <p class="text-muted">Select your preferences above and click "Generate Recommendations" to get started!</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Save outfit functionality
+    document.querySelectorAll('.save-outfit').forEach(button => {
+        button.addEventListener('click', function() {
+            const outfitData = this.dataset.outfit;
+            
+            fetch('/imageprocessor/outfits/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `outfit_data=${encodeURIComponent(outfitData)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.innerHTML = '<i class="fas fa-check"></i> Saved';
+                    this.classList.remove('btn-success');
+                    this.classList.add('btn-outline-success');
+                    this.disabled = true;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving the outfit.');
+            });
+        });
+    });
+});
+
+function shareOutfit(outfitName) {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Check out this outfit recommendation!',
+            text: `I found a great outfit: ${outfitName}`,
+            url: window.location.href
+        });
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(`${outfitName} - ${window.location.href}`).then(() => {
+            alert('Outfit link copied to clipboard!');
+        });
+    }
+}
+</script>
+{% endblock %}

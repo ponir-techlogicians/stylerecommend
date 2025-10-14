@@ -1,0 +1,172 @@
+{% extends 'imageprocessor/base.html' %}
+
+{% block title %}Add to Wardrobe - Style Recommend{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-tshirt"></i> Add to Wardrobe
+        </h1>
+        <p class="lead">Convert your processed image into a wardrobe item</p>
+    </div>
+</div>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-plus"></i> Create Wardrobe Item
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Image Preview -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Original Image:</h6>
+                            {% if processed_image.original_image %}
+                                <img src="{{ processed_image.original_image.url }}" class="img-fluid rounded" alt="Original">
+                            {% else %}
+                                <div class="bg-light p-4 text-center rounded">
+                                    <i class="fas fa-image fa-3x text-muted"></i>
+                                    <p class="text-muted mt-2">No original image</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Processed Image:</h6>
+                            {% if processed_image.processed_image %}
+                                <img src="{{ processed_image.processed_image.url }}" class="img-fluid rounded" alt="Processed">
+                            {% else %}
+                                <div class="bg-light p-4 text-center rounded">
+                                    <i class="fas fa-image fa-3x text-muted"></i>
+                                    <p class="text-muted mt-2">No processed image</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.processed_image }}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.name.label_tag }}
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="text-danger">{{ form.name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.category.label_tag }}
+                                    {{ form.category }}
+                                    {% if form.category.errors %}
+                                        <div class="text-danger">{{ form.category.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.color.label_tag }}
+                                    {{ form.color }}
+                                    {% if form.color.errors %}
+                                        <div class="text-danger">{{ form.color.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.brand.label_tag }}
+                                    {{ form.brand }}
+                                    {% if form.brand.errors %}
+                                        <div class="text-danger">{{ form.brand.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.size.label_tag }}
+                                    {{ form.size }}
+                                    {% if form.size.errors %}
+                                        <div class="text-danger">{{ form.size.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.material.label_tag }}
+                                    {{ form.material }}
+                                    {% if form.material.errors %}
+                                        <div class="text-danger">{{ form.material.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.occasion.label_tag }}
+                                    {{ form.occasion }}
+                                    {% if form.occasion.errors %}
+                                        <div class="text-danger">{{ form.occasion.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.season.label_tag }}
+                                    {{ form.season }}
+                                    {% if form.season.errors %}
+                                        <div class="text-danger">{{ form.season.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'imageprocessor:detail' processed_image.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Image
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add to Wardrobe
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Tips for Better Recommendations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Name:</strong> Give your item a descriptive name (e.g., "Blue Denim Jacket")</li>
+                        <li><strong>Category:</strong> Choose the most appropriate category for better outfit matching</li>
+                        <li><strong>Color:</strong> Select the primary color - this affects color coordination in outfits</li>
+                        <li><strong>Occasion:</strong> Specify when you'd wear this item for better recommendations</li>
+                        <li><strong>Season:</strong> Indicate the season to get weather-appropriate suggestions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
