@@ -61,7 +61,15 @@ class GeminiImageProcessor:
                 contents=[edit_prompt, image_to_edit]
             )
 
-            print('response',response)
+            # 1. Access the usage_metadata attribute
+            usage = response.usage_metadata
+            print("\n--- Token Usage Details ---")
+            print(f"Input Prompt Token Count: {usage.prompt_token_count}")
+            # Note: For multimodal calls (image + text), prompt_token_count includes both.
+            # The image itself is tokenized at a fixed rate based on its size (e.g., 258 tokens for a small image, or 258 tokens per 768x768 tile).
+            print(f"Output Token Count (Candidates): {usage.candidates_token_count}")
+            print(f"Total Token Count: {usage.total_token_count}")
+            print("---------------------------\n")
             
             # Process and save the edited image
             for part in response.candidates[0].content.parts:
@@ -235,6 +243,13 @@ Return ONLY the JSON object, no additional text."""
                 max_tokens=500,
                 temperature=0.1
             )
+
+            prompt_tokens = response.usage.prompt_tokens
+            completion_tokens = response.usage.completion_tokens
+            total_tokens = response.usage.total_tokens
+            print(f"Prompt Tokens: {prompt_tokens}")
+            print(f"Completion Tokens: {completion_tokens}")
+            print(f"Total Tokens: {total_tokens}")
             
             if response.choices and len(response.choices) > 0:
                 analysis_text = response.choices[0].message.content
@@ -428,6 +443,18 @@ class NanobananaMannequinService:
                 model="gemini-2.5-flash-image",
                 contents=[edit_prompt, composite_image]
             )
+
+            # 1. Access the usage_metadata attribute
+            usage = response.usage_metadata
+
+            # 2. Print the token details
+            print("\n--- Token Usage Details ---")
+            print(f"Input Prompt Token Count: {usage.prompt_token_count}")
+            # Note: For multimodal calls (image + text), prompt_token_count includes both.
+            # The image itself is tokenized at a fixed rate based on its size (e.g., 258 tokens for a small image, or 258 tokens per 768x768 tile).
+            print(f"Output Token Count (Candidates): {usage.candidates_token_count}")
+            print(f"Total Token Count: {usage.total_token_count}")
+            print("---------------------------\n")
             
             logger.info(f"Gemini API response received: {len(response.candidates)} candidates")
             
