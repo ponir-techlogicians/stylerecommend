@@ -50,10 +50,14 @@ class GeminiImageProcessor:
             image_to_edit = Image.open(image_path)
             
             # Define the editing prompt
-            edit_prompt = """Smooth out wrinkles and flatten the garment.  
-            Remove the background and place the garment on a pure white background.  
-            Make it look like a professional product photo.  
-            Maintain the natural shape of the clothing."""
+            edit_prompt = (
+                f"Only process the {clothing_type}. Ignore and do not alter any other "
+                f"garments or regions such as pants, shoes, skin, hair, or props. "
+                f"Isolate the {clothing_type}, remove its background, and place it on a "
+                f"pure white background. Smooth out wrinkles and flatten the {clothing_type} "
+                f"while keeping its natural shape. Center and crop the frame around only "
+                f"the {clothing_type} to look like a professional product photo."
+            )
             
             # Call the Gemini API
             response = self.client.models.generate_content(
@@ -196,23 +200,36 @@ class OpenAIImageProcessor:
                 base64_image = base64.b64encode(image_file.read()).decode('utf-8')
             
             # Generate the analysis prompt for structured JSON response
-            analysis_prompt = f"""Analyze this clothing image and describe the garment with the following information as JSON format:
+            desired_type_mapping = {
+                'shirt': 'top', 'tshirt': 'top', 'sweater': 'top', 'hoodie': 'top', 'blouse': 'top', 'top': 'top',
+                'jacket': 'outerwear', 'coat': 'outerwear', 'outerwear': 'outerwear',
+                'pants': 'bottom', 'skirt': 'bottom', 'shorts': 'bottom', 'jeans': 'bottom', 'bottom': 'bottom',
+                'dress': 'dress',
+                'shoes': 'shoes', 'sneakers': 'shoes', 'heels': 'shoes', 'boots': 'shoes',
+                'watch': 'accessories', 'belt': 'accessories', 'hat': 'accessories', 'bag': 'accessories', 'accessories': 'accessories'
+            }
+            desired_type = desired_type_mapping.get((clothing_type or '').lower(), 'accessories')
+
+            analysis_prompt = f"""Analyze this image but focus EXCLUSIVELY on the {clothing_type}. 
+Ignore all other garments, body parts, or background. If multiple garments are visible, consider only the {clothing_type}. 
+Set the JSON field \"type\" to \"{desired_type}\" exactly.
+
+Return a single JSON object:
 
 {{
-    "type": "top/bottom/shoes/watch/accessories",
-    "color": "primary color name",
-    "style": "style description (e.g., casual, formal, sporty)",
-    "material": "material/fabric type",
-    "pattern": "pattern description or 'solid'",
-    "occasion": "suitable occasion (casual, formal, business, party, sport, evening)",
-    "season": "suitable season (spring, summer, fall, winter, all)"
+    \"type\": \"{desired_type}\",
+    \"color\": \"primary color name\",
+    \"style\": \"style description (e.g., casual, formal, sporty)\",
+    \"material\": \"material/fabric type\",
+    \"pattern\": \"pattern description or 'solid'\",
+    \"occasion\": \"suitable occasion (casual, formal, business, party, sport, evening)\",
+    \"season\": \"suitable season (spring, summer, fall, winter, all)\"
 }}
 
-Focus on accurately identifying:
-1. The exact type of clothing item
-2. The primary color and any patterns
-3. The style and material
-4. Suitable occasions and seasons
+Focus on accurately identifying FOR THE {clothing_type} ONLY:
+1. The primary color and any patterns
+2. The style and material
+3. Suitable occasions and seasons
 
 Return ONLY the JSON object, no additional text."""
             
@@ -674,11 +691,13 @@ Respond in JSON format:
             "raw_analysis": text
         }
     
-    def generate_outfit_recommendations(self, occasion='casual', season='all', max_outfits=5):
+    def generate_outfit_recommendations(self, user=None, occasion='casual', season='all', max_outfits=5):
         """Generate outfit recommendations from wardrobe items"""
         try:
             # Get available wardrobe items
             wardrobe_items = WardrobeItem.objects.all()
+            if user is not None:
+                wardrobe_items = wardrobe_items.filter(user=user)
             
             if not wardrobe_items.exists():
                 return {
@@ -1172,7 +1191,7 @@ Please:
         
         return "\n".join(description_parts)
     
-    def save_outfit_recommendation(self, outfit_data):
+    def save_outfit_recommendation(self, outfit_data, user=None):
         """Save an outfit recommendation to the database"""
         try:
             # Create outfit recommendation
@@ -1183,7 +1202,8 @@ Please:
                 style_description=outfit_data.get('style_description', ''),
                 color_scheme=outfit_data.get('color_scheme', []),
                 style_tags=outfit_data.get('style_tags', []),
-                confidence_score=outfit_data.get('confidence_score', 0.5)
+                confidence_score=outfit_data.get('confidence_score', 0.5),
+                user=user
             )
             
             # Add items to outfit

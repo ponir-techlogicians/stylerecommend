@@ -1,0 +1,14 @@
+{% extends 'imageprocessor/base.html' %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width: 480px;">
+    <h2 class="mb-4">Login</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Login</button>
+        <a href="{% url 'imageprocessor:register' %}" class="btn btn-link">Create an account</a>
+    </form>
+</div>
+{% endblock %}
+

@@ -40,6 +40,9 @@ class ProcessedImage(models.Model):
         ('failed', 'Failed'),
     ]
     
+    # Ownership
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='processed_images', null=True, blank=True)
+
     # Basic information
     clothing_type = models.CharField(
         max_length=20,
@@ -155,6 +158,9 @@ class WardrobeItem(models.Model):
         ('travel', 'Travel'),
     ]
     
+    # Ownership
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wardrobe_items', null=True, blank=True)
+
     # Link to processed image
     processed_image = models.OneToOneField(
         ProcessedImage,
@@ -263,6 +269,9 @@ class OutfitRecommendation(models.Model):
         ('all', 'All Season'),
     ]
     
+    # Ownership
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='outfit_recommendations', null=True, blank=True)
+
     # Outfit details
     name = models.CharField(max_length=200, help_text="Name for this outfit")
     occasion = models.CharField(

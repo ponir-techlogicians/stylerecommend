@@ -26,4 +26,7 @@ urlpatterns = [
     path('api/toggle-favorite/<int:item_id>/', views.toggle_favorite_item, name='toggle_favorite_item'),
     path('api/analyze-item/<int:item_id>/', views.analyze_wardrobe_item, name='analyze_wardrobe_item'),
     path('api/rate-outfit/<int:outfit_id>/', views.rate_outfit, name='rate_outfit'),
+
+    # Accounts
+    path('accounts/register/', views.register, name='register'),
 ]

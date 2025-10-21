@@ -8,6 +8,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.shortcuts import redirect
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
@@ -20,7 +24,7 @@ from .forms import WardrobeItemForm, OutfitRecommendationForm, OutfitSearchForm,
 logger = logging.getLogger(__name__)
 
 
-class ImageUploadView(View):
+class ImageUploadView(LoginRequiredMixin, View):
     """View for uploading and processing images"""
     
     def get(self, request):
@@ -52,6 +56,7 @@ class ImageUploadView(View):
             
             # Create ProcessedImage instance
             processed_image = ProcessedImage.objects.create(
+                user=request.user,
                 clothing_type=clothing_type,
                 original_image=uploaded_file,
                 processing_prompt=OpenAIImageProcessor().generate_clothing_prompt(clothing_type),
@@ -149,13 +154,15 @@ class ImageUploadView(View):
                 if analysis_result['success']:
                     analysis_data = analysis_result['analysis']
                     
-                    # Map analysis type to wardrobe category
+                    # Map types to wardrobe category
                     type_mapping = {
                         'top': 'top',
                         'bottom': 'bottom', 
                         'shoes': 'shoes',
                         'watch': 'accessories',
-                        'accessories': 'accessories'
+                        'accessories': 'accessories',
+                        'outerwear': 'outerwear',
+                        'dress': 'dress',
                     }
                     
                     # Map color to wardrobe color choices
@@ -197,21 +204,43 @@ class ImageUploadView(View):
                         'all': 'all'
                     }
                     
-                    # Extract values with fallbacks
-                    category = type_mapping.get(analysis_data.get('type', '').lower(), 'accessories')
+                    # Prefer the user's selected clothing_type for category
+                    user_selected_category = {
+                        'jacket': 'outerwear',
+                        'shirt': 'top',
+                        'tshirt': 'top',
+                        'pants': 'bottom',
+                        'dress': 'dress',
+                        'sweater': 'top',
+                        'hoodie': 'top',
+                        'coat': 'outerwear',
+                        'blouse': 'top',
+                        'skirt': 'bottom',
+                        'shorts': 'bottom',
+                        'shoes': 'shoes',
+                        'other': 'accessories',
+                    }.get(processed_image.clothing_type, 'accessories')
+
+                    ai_type = (analysis_data.get('type') or '').lower().strip()
+                    ai_category = type_mapping.get(ai_type)
+
+                    # Use AI category only if it exists and matches the user's high-level category; otherwise keep user's selection
+                    category = ai_category if ai_category == user_selected_category else user_selected_category
                     color = color_mapping.get(analysis_data.get('color', '').lower(), analysis_data.get('color', '').lower())
                     occasion = occasion_mapping.get(analysis_data.get('occasion', '').lower(), 'casual')
                     season = season_mapping.get(analysis_data.get('season', '').lower(), 'all')
                     material = analysis_data.get('material', 'unknown')
                     style = analysis_data.get('style', 'casual')
                     
-                    # Generate a name based on analysis
+                    # Generate a name; base it on the resolved category to avoid mismatched labels
                     from django.utils import timezone
                     timestamp = timezone.now().strftime('%Y%m%d_%H%M')
-                    name = f"{color.title()} {analysis_data.get('type', processed_image.clothing_type).title()} {timestamp}"
+                    resolved_type_for_name = ai_type if type_mapping.get(ai_type) == category else processed_image.clothing_type
+                    name = f"{color.title()} {resolved_type_for_name.title()} {timestamp}"
                     
                     # Create wardrobe item with AI analysis data
                     wardrobe_item = WardrobeItem.objects.create(
+                        user=processed_image.user,
                         processed_image=processed_image,
                         name=name,
                         category=category,
@@ -266,6 +295,7 @@ class ImageUploadView(View):
             
             # Create wardrobe item with default values
             wardrobe_item = WardrobeItem.objects.create(
+                user=processed_image.user,
                 processed_image=processed_image,
                 name=name,
                 category=category,
@@ -280,12 +310,12 @@ class ImageUploadView(View):
             logger.error(f"Error in fallback wardrobe item creation for image {processed_image.id}: {e}")
 
 
-class ImageResultView(View):
+class ImageResultView(LoginRequiredMixin, View):
     """View for displaying processing results"""
     
     def get(self, request, image_id):
         """Display the processing result"""
-        processed_image = get_object_or_404(ProcessedImage, id=image_id)
+        processed_image = get_object_or_404(ProcessedImage, id=image_id, user=request.user)
         
         context = {
             'processed_image': processed_image,
@@ -296,12 +326,12 @@ class ImageResultView(View):
         return render(request, 'imageprocessor/result.html', context)
 
 
-class ImageListView(View):
+class ImageListView(LoginRequiredMixin, View):
     """View for listing all processed images"""
     
     def get(self, request):
         """Display list of all processed images"""
-        processed_images = ProcessedImage.objects.all()
+        processed_images = ProcessedImage.objects.filter(user=request.user)
         
         context = {
             'processed_images': processed_images,
@@ -310,12 +340,12 @@ class ImageListView(View):
         return render(request, 'imageprocessor/list.html', context)
 
 
-class ImageDetailView(View):
+class ImageDetailView(LoginRequiredMixin, View):
     """View for displaying detailed information about a processed image"""
     
     def get(self, request, image_id):
         """Display detailed information about a processed image"""
-        processed_image = get_object_or_404(ProcessedImage, id=image_id)
+        processed_image = get_object_or_404(ProcessedImage, id=image_id, user=request.user)
         
         context = {
             'processed_image': processed_image,
@@ -324,12 +354,13 @@ class ImageDetailView(View):
         return render(request, 'imageprocessor/detail.html', context)
 
 
+@login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def check_processing_status(request, image_id):
     """API endpoint to check processing status"""
     try:
-        processed_image = get_object_or_404(ProcessedImage, id=image_id)
+        processed_image = get_object_or_404(ProcessedImage, id=image_id, user=request.user)
         
         return JsonResponse({
             'status': processed_image.status,
@@ -344,13 +375,13 @@ def check_processing_status(request, image_id):
 
 # Wardrobe Management Views
 
-class WardrobeListView(View):
+class WardrobeListView(LoginRequiredMixin, View):
     """View for displaying all wardrobe items"""
     
     def get(self, request):
         """Display wardrobe items with search and filter options"""
         search_form = WardrobeItemSearchForm(request.GET)
-        wardrobe_items = WardrobeItem.objects.all()
+        wardrobe_items = WardrobeItem.objects.filter(user=request.user)
         
         # Apply filters
         if search_form.is_valid():
@@ -391,12 +422,12 @@ class WardrobeListView(View):
         return render(request, 'imageprocessor/wardrobe_list.html', context)
 
 
-class WardrobeItemDetailView(View):
+class WardrobeItemDetailView(LoginRequiredMixin, View):
     """View for displaying individual wardrobe item details"""
     
     def get(self, request, item_id):
         """Display wardrobe item details"""
-        item = get_object_or_404(WardrobeItem, id=item_id)
+        item = get_object_or_404(WardrobeItem, id=item_id, user=request.user)
         
         # Get outfits that include this item
         outfits_with_item = OutfitRecommendation.objects.filter(items=item)
@@ -409,12 +440,12 @@ class WardrobeItemDetailView(View):
         return render(request, 'imageprocessor/wardrobe_item_detail.html', context)
 
 
-class WardrobeItemEditView(View):
+class WardrobeItemEditView(LoginRequiredMixin, View):
     """View for editing wardrobe items"""
     
     def get(self, request, item_id):
         """Display edit form"""
-        item = get_object_or_404(WardrobeItem, id=item_id)
+        item = get_object_or_404(WardrobeItem, id=item_id, user=request.user)
         form = WardrobeItemForm(instance=item)
         
         context = {
@@ -426,7 +457,7 @@ class WardrobeItemEditView(View):
     
     def post(self, request, item_id):
         """Handle form submission"""
-        item = get_object_or_404(WardrobeItem, id=item_id)
+        item = get_object_or_404(WardrobeItem, id=item_id, user=request.user)
         form = WardrobeItemForm(request.POST, instance=item)
         
         if form.is_valid():
@@ -442,12 +473,12 @@ class WardrobeItemEditView(View):
         return render(request, 'imageprocessor/wardrobe_item_edit.html', context)
 
 
-class ConvertToWardrobeView(View):
+class ConvertToWardrobeView(LoginRequiredMixin, View):
     """View for converting processed images to wardrobe items"""
     
     def get(self, request, image_id):
         """Display conversion form"""
-        processed_image = get_object_or_404(ProcessedImage, id=image_id)
+        processed_image = get_object_or_404(ProcessedImage, id=image_id, user=request.user)
         
         if processed_image.status != 'completed':
             messages.error(request, 'Image must be processed before adding to wardrobe.')
@@ -470,13 +501,14 @@ class ConvertToWardrobeView(View):
     
     def post(self, request, image_id):
         """Handle conversion"""
-        processed_image = get_object_or_404(ProcessedImage, id=image_id)
+        processed_image = get_object_or_404(ProcessedImage, id=image_id, user=request.user)
         form = ConvertToWardrobeForm(request.POST)
         
         if form.is_valid():
             try:
                 # Create wardrobe item
                 wardrobe_item = WardrobeItem.objects.create(
+                    user=request.user,
                     processed_image=processed_image,
                     name=form.cleaned_data['name'],
                     category=form.cleaned_data['category'],
@@ -505,7 +537,7 @@ class ConvertToWardrobeView(View):
 
 # Outfit Recommendation Views
 
-class OutfitRecommendationView(View):
+class OutfitRecommendationView(LoginRequiredMixin, View):
     """View for generating and displaying outfit recommendations"""
     
     def get(self, request):
@@ -524,6 +556,7 @@ class OutfitRecommendationView(View):
             try:
                 style_service = StyleRecommendationService()
                 result = style_service.generate_outfit_recommendations(
+                    user=request.user,
                     occasion=occasion,
                     season=season,
                     max_outfits=max_outfits
@@ -582,7 +615,7 @@ class OutfitRecommendationView(View):
                 outfit_json = json.loads(outfit_data)
                 
                 style_service = StyleRecommendationService()
-                result = style_service.save_outfit_recommendation(outfit_json)
+                result = style_service.save_outfit_recommendation(outfit_json, user=request.user)
                 
                 if result['success']:
                     messages.success(request, 'Outfit saved successfully!')
@@ -597,12 +630,12 @@ class OutfitRecommendationView(View):
         return JsonResponse({'success': False, 'error': 'No outfit data provided'})
 
 
-class OutfitDetailView(View):
+class OutfitDetailView(LoginRequiredMixin, View):
     """View for displaying individual outfit details"""
     
     def get(self, request, outfit_id):
         """Display outfit details"""
-        outfit = get_object_or_404(OutfitRecommendation, id=outfit_id)
+        outfit = get_object_or_404(OutfitRecommendation, id=outfit_id, user=request.user)
         
         context = {
             'outfit': outfit,
@@ -611,12 +644,12 @@ class OutfitDetailView(View):
         return render(request, 'imageprocessor/outfit_detail.html', context)
 
 
-class SavedOutfitsView(View):
+class SavedOutfitsView(LoginRequiredMixin, View):
     """View for displaying saved outfit recommendations"""
     
     def get(self, request):
         """Display saved outfits"""
-        outfits = OutfitRecommendation.objects.all().order_by('-created_at')
+        outfits = OutfitRecommendation.objects.filter(user=request.user).order_by('-created_at')
         
         # Apply filters if provided
         occasion = request.GET.get('occasion')
@@ -637,12 +670,13 @@ class SavedOutfitsView(View):
 
 # AJAX Views
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def toggle_favorite_item(request, item_id):
     """Toggle favorite status of a wardrobe item"""
     try:
-        item = get_object_or_404(WardrobeItem, id=item_id)
+        item = get_object_or_404(WardrobeItem, id=item_id, user=request.user)
         item.is_favorite = not item.is_favorite
         item.save()
         
@@ -655,12 +689,13 @@ def toggle_favorite_item(request, item_id):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def analyze_wardrobe_item(request, item_id):
     """Analyze wardrobe item with AI"""
     try:
-        item = get_object_or_404(WardrobeItem, id=item_id)
+        item = get_object_or_404(WardrobeItem, id=item_id, user=request.user)
         
         style_service = StyleRecommendationService()
         result = style_service.update_wardrobe_item_analysis(item)
@@ -683,12 +718,13 @@ def analyze_wardrobe_item(request, item_id):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def rate_outfit(request, outfit_id):
     """Rate an outfit recommendation"""
     try:
-        outfit = get_object_or_404(OutfitRecommendation, id=outfit_id)
+        outfit = get_object_or_404(OutfitRecommendation, id=outfit_id, user=request.user)
         rating = int(request.POST.get('rating', 0))
         
         if 1 <= rating <= 5:
@@ -706,3 +742,18 @@ def rate_outfit(request, outfit_id):
     except Exception as e:
         logger.error(f"Error rating outfit: {e}")
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+def register(request):
+    """User registration view using Django's UserCreationForm"""
+    if request.user.is_authenticated:
+        return redirect('imageprocessor:upload')
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Account created successfully. Please log in.')
+            return redirect('login')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
