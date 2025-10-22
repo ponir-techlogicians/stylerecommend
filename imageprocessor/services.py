@@ -24,6 +24,12 @@ from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
 from typing import List
 
+# Concurrent processing imports
+import asyncio
+import concurrent.futures
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 logger = logging.getLogger(__name__)
 
 
@@ -822,13 +828,8 @@ Respond in JSON format:
             batch_analysis = self._analyze_all_outfits_with_ai(outfits, occasion, season, max_outfits)
             ai_outfits = batch_analysis['outfits']
             
-            # Generate composite flat-lay image
-            image_generator = OutfitImageGenerator()
-            composite_result = image_generator.generate_outfit_composite_image(
-                ai_outfits, occasion, season
-            )
-
-            
+            # Generate individual flat-lay and mannequin images for each outfit concurrently
+            ai_outfits = self._process_outfits_concurrently(ai_outfits, occasion, season)
             
             result_data = {
                 'success': True,
@@ -837,32 +838,6 @@ Respond in JSON format:
                 'total_analyzed': batch_analysis['total_analyzed'],
                 'overall_analysis': batch_analysis['overall_analysis']
             }
-            
-            # Add composite image data if generation was successful
-            if composite_result['success']:
-                result_data['composite_image'] = composite_result['composite_image']
-                result_data['composite_image_data'] = composite_result['image_data']
-                result_data['outfits_shown_in_image'] = composite_result['outfits_shown']
-                
-                # Generate mannequin image using Nanobanana
-                try:
-                    nanobanana_service = NanobananaMannequinService()
-                    mannequin_result = nanobanana_service.generate_mannequin_image(
-                        composite_result['image_data'], occasion, season
-                    )
-                    
-                    if mannequin_result['success']:
-                        result_data['mannequin_image_data'] = mannequin_result['mannequin_image_data']
-                        result_data['mannequin_analysis'] = mannequin_result['analysis']
-                        logger.info("Successfully generated mannequin image")
-                    else:
-                        logger.warning(f"Failed to generate mannequin image: {mannequin_result['error']}")
-                        
-                except Exception as e:
-                    logger.error(f"Error generating mannequin image: {e}")
-                    # Don't fail the entire request if mannequin generation fails
-            else:
-                logger.warning(f"Failed to generate composite image: {composite_result['error']}")
             
             return result_data
             
@@ -934,6 +909,112 @@ Respond in JSON format:
             'outerwear': [item for item in items if item.category == 'outerwear'],
             'dresses': [item for item in items if item.category == 'dress'],
         }
+    
+    def _process_single_outfit(self, outfit_data):
+        """Process a single outfit to generate flat-lay and mannequin images"""
+        outfit, occasion, season, index = outfit_data
+        try:
+            logger.info(f"Processing outfit {index+1}: {outfit.get('name', 'Unknown')}")
+            
+            # Initialize services
+            image_generator = OutfitImageGenerator()
+            nanobanana_service = NanobananaMannequinService()
+            
+            # Generate individual flat-lay image
+            flatlay_result = image_generator.generate_outfit_flatlay_image(outfit, occasion, season)
+            
+            if flatlay_result['success']:
+                # Encode flat-lay image data as base64
+                import base64
+                outfit['flatlay_image_data'] = base64.b64encode(flatlay_result['image_data']).decode('utf-8')
+                logger.info(f"Generated flat-lay image for outfit {index+1}")
+            else:
+                logger.warning(f"Failed to generate flat-lay for outfit {index+1}: {flatlay_result['error']}")
+                outfit['flatlay_image_data'] = None
+            
+            # Generate mannequin image from the flat-lay
+            if flatlay_result['success']:
+                try:
+                    mannequin_result = nanobanana_service.generate_mannequin_image(
+                        flatlay_result['image_data'], occasion, season
+                    )
+                    
+                    if mannequin_result['success']:
+                        # Encode mannequin image data as base64
+                        outfit['mannequin_image_data'] = base64.b64encode(mannequin_result['mannequin_image_data']).decode('utf-8')
+                        outfit['mannequin_analysis'] = mannequin_result['analysis']
+                        logger.info(f"Generated mannequin image for outfit {index+1}")
+                    else:
+                        logger.warning(f"Failed to generate mannequin for outfit {index+1}: {mannequin_result['error']}")
+                        outfit['mannequin_image_data'] = None
+                        outfit['mannequin_analysis'] = None
+                        
+                except Exception as e:
+                    logger.error(f"Error generating mannequin for outfit {index+1}: {e}")
+                    outfit['mannequin_image_data'] = None
+                    outfit['mannequin_analysis'] = None
+            else:
+                outfit['mannequin_image_data'] = None
+                outfit['mannequin_analysis'] = None
+                
+            return outfit, index
+            
+        except Exception as e:
+            logger.error(f"Error processing outfit {index+1}: {e}")
+            # Ensure outfit has the required fields even if processing fails
+            outfit['flatlay_image_data'] = None
+            outfit['mannequin_image_data'] = None
+            outfit['mannequin_analysis'] = None
+            return outfit, index
+    
+    def _process_outfits_concurrently(self, outfits, occasion, season):
+        """Process all outfits concurrently using ThreadPoolExecutor"""
+        if not outfits:
+            return outfits
+            
+        logger.info(f"Starting concurrent processing of {len(outfits)} outfits")
+        start_time = time.time()
+        
+        # Prepare data for concurrent processing
+        outfit_data = [(outfit, occasion, season, i) for i, outfit in enumerate(outfits)]
+        
+        # Use ThreadPoolExecutor for concurrent processing
+        # Limit max_workers to avoid overwhelming the API and rate limits
+        # Can be configured via environment variable or settings
+        max_concurrent = getattr(settings, 'OUTFIT_CONCURRENT_WORKERS', 5)
+        max_workers = min(len(outfits), max_concurrent)
+        
+        processed_outfits = [None] * len(outfits)
+        completed_count = 0
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_index = {
+                executor.submit(self._process_single_outfit, data): data[3] 
+                for data in outfit_data
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_index):
+                try:
+                    outfit, index = future.result()
+                    processed_outfits[index] = outfit
+                    completed_count += 1
+                    elapsed_time = time.time() - start_time
+                    logger.info(f"Completed processing outfit {index+1} ({completed_count}/{len(outfits)}) in {elapsed_time:.2f}s")
+                except Exception as e:
+                    index = future_to_index[future]
+                    logger.error(f"Failed to process outfit {index+1}: {e}")
+                    # Keep the original outfit with null image data
+                    processed_outfits[index] = outfits[index]
+                    processed_outfits[index]['flatlay_image_data'] = None
+                    processed_outfits[index]['mannequin_image_data'] = None
+                    processed_outfits[index]['mannequin_analysis'] = None
+                    completed_count += 1
+        
+        total_time = time.time() - start_time
+        logger.info(f"Completed concurrent processing of {len(outfits)} outfits in {total_time:.2f}s")
+        return processed_outfits
     
     def _analyze_outfit_with_ai(self, outfit, occasion, season):
         """Use AI to analyze and score an outfit combination using LangChain"""

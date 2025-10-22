@@ -23,7 +23,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="get" class="row g-3">
+                    <form method="get" class="row g-3" id="outfit-search-form">
                         <div class="col-md-4">
                             {{ search_form.occasion.label_tag }}
                             {{ search_form.occasion }}
@@ -32,10 +32,9 @@
                             {{ search_form.season.label_tag }}
                             {{ search_form.season }}
                         </div>
-                        <div class="col-md-4" style="display: none;">
-{#                            {{ search_form.max_outfits.label_tag }}#}
-{#                            {{ search_form.max_outfits }}#}
-                            <input name="max_outfits" value="1">
+                        <div class="col-md-4">
+                            {{ search_form.max_outfits.label_tag }}
+                            {{ search_form.max_outfits }}
                         </div>
                         <div class="col-12">
                             <button type="submit" class="btn btn-primary">
@@ -62,44 +61,95 @@
             </div>
         </div>
 
-        <!-- Composite Flat-lay Image -->
-        {% if composite_image_data %}
+        <!-- Outfit Slider -->
+        <div class="outfit-slider-container">
             <div class="row justify-content-center mb-4">
                 <div class="col-12">
                     <h4 class="text-center mb-3">
-                        <i class="fas fa-th-large"></i> Flat-lay View
+                        <i class="fas fa-magic"></i> Outfit Recommendations
                     </h4>
-                    <div class="text-center">
-                        <img src="data:image/png;base64,{{ composite_image_data|safe }}" 
-                             alt="Outfit Recommendations" 
-                             class="img-fluid" 
-                             style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                    
+                    <!-- Slider Controls -->
+                    <div class="slider-controls text-center mb-3">
+                        <button id="prevOutfit" class="btn btn-outline-primary me-3" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span id="outfitCounter" class="badge bg-primary fs-6">1 of {{ outfits|length }}</span>
+                        <button id="nextOutfit" class="btn btn-outline-primary ms-3">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Outfit Display -->
+                    <div class="outfit-display">
+                        <div class="row">
+                            <!-- Flat-lay Image -->
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-th-large"></i> Flat-lay View
+                                        </h5>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <img id="flatlay-image" 
+                                             src="" 
+                                             alt="Outfit Flat-lay" 
+                                             class="img-fluid" 
+                                             style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: none;">
+                                        <div id="flatlay-placeholder" class="text-muted">
+                                            <i class="fas fa-image fa-3x mb-2"></i>
+                                            <p>Loading flat-lay image...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Mannequin Image -->
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-user"></i> Mannequin Display
+                                        </h5>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <img id="mannequin-image" 
+                                             src="" 
+                                             alt="Outfit on Mannequin" 
+                                             class="img-fluid" 
+                                             style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: none;">
+                                        <div id="mannequin-placeholder" class="text-muted">
+                                            <i class="fas fa-user fa-3x mb-2"></i>
+                                            <p>Loading mannequin image...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Outfit Details -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-info-circle"></i> Outfit Details
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <h4 id="outfit-name" class="text-primary mb-3"></h4>
+                                        <div id="outfit-items" class="mb-3"></div>
+                                        <div id="outfit-analysis" class="mb-3"></div>
+                                        <div id="outfit-mannequin-analysis" class="text-muted"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        {% endif %}
-
-        <!-- Mannequin Image -->
-        {% if mannequin_image_data %}
-            <div class="row justify-content-center mb-4">
-                <div class="col-12">
-                    <h4 class="text-center mb-3">
-                        <i class="fas fa-user"></i> Mannequin Display
-                    </h4>
-                    <div class="text-center">
-                        <img src="data:image/png;base64,{{ mannequin_image_data|safe }}" 
-                             alt="Outfit on Mannequin" 
-                             class="img-fluid" 
-                             style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                    </div>
-                    {% if mannequin_analysis %}
-                        <p class="text-muted text-center mt-2">
-                            <i class="fas fa-info-circle"></i> {{ mannequin_analysis }}
-                        </p>
-                    {% endif %}
-                </div>
-            </div>
-        {% endif %}
+        </div>
 
         <!-- Overall Analysis -->
 {#        {% if overall_analysis %}#}
@@ -119,71 +169,6 @@
 {#            </div>#}
 {#        {% endif %}#}
 
-        {% if not composite_image_data and not mannequin_image_data %}
-            <!-- Fallback: Show individual outfit cards if no composite image -->
-            <div class="row">
-                {% for outfit in outfits %}
-                    <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card h-100">
-                            <div class="card-header">
-                                <h6 class="mb-0">{{ outfit.name }}</h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-calendar"></i> {{ outfit.occasion|title }}
-                                    <i class="fas fa-leaf ms-2"></i> {{ outfit.season|title }}
-                                </small>
-                            </div>
-                            
-                            <div class="card-body">
-                                <!-- Outfit Items -->
-                                <div class="row mb-3">
-                                    {% if outfit.tops %}
-                                        <div class="col-12 mb-2">
-                                            <h6 class="text-muted">Tops:</h6>
-                                            {% for top in outfit.tops %}
-                                                <div class="d-flex align-items-center mb-1">
-                                                    {% if top.get_image_url %}
-                                                        <img src="{{ top.get_image_url }}" alt="{{ top.name }}" class="me-2" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;">
-                                                    {% endif %}
-                                                    <small>{{ top.name }} ({{ top.get_color_display }})</small>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-
-                                    {% if outfit.bottoms %}
-                                        <div class="col-12 mb-2">
-                                            <h6 class="text-muted">Bottoms:</h6>
-                                            {% for bottom in outfit.bottoms %}
-                                                <div class="d-flex align-items-center mb-1">
-                                                    {% if bottom.get_image_url %}
-                                                        <img src="{{ bottom.get_image_url }}" alt="{{ bottom.name }}" class="me-2" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;">
-                                                    {% endif %}
-                                                    <small>{{ bottom.name }} ({{ bottom.get_color_display }})</small>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-
-                                    {% if outfit.shoes %}
-                                        <div class="col-12 mb-2">
-                                            <h6 class="text-muted">Shoes:</h6>
-                                            {% for shoe in outfit.shoes %}
-                                                <div class="d-flex align-items-center mb-1">
-                                                    {% if shoe.get_image_url %}
-                                                        <img src="{{ shoe.get_image_url }}" alt="{{ shoe.name }}" class="me-2" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;">
-                                                    {% endif %}
-                                                    <small>{{ shoe.name }} ({{ shoe.get_color_display }})</small>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
     {% else %}
         <div class="text-center py-5">
             <i class="fas fa-magic fa-5x text-muted mb-3"></i>
@@ -197,6 +182,234 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Outfit slider functionality
+    const outfits = {{ outfits_json|safe }};
+    let currentOutfitIndex = 0;
+    
+    console.log('Outfits data:', outfits);
+    console.log('Number of outfits:', outfits.length);
+    console.log('Type of outfits:', typeof outfits);
+    console.log('Is array:', Array.isArray(outfits));
+    
+    const prevButton = document.getElementById('prevOutfit');
+    const nextButton = document.getElementById('nextOutfit');
+    const outfitCounter = document.getElementById('outfitCounter');
+    const flatlayImage = document.getElementById('flatlay-image');
+    const mannequinImage = document.getElementById('mannequin-image');
+    const flatlayPlaceholder = document.getElementById('flatlay-placeholder');
+    const mannequinPlaceholder = document.getElementById('mannequin-placeholder');
+    const outfitName = document.getElementById('outfit-name');
+    const outfitItems = document.getElementById('outfit-items');
+    const outfitAnalysis = document.getElementById('outfit-analysis');
+    const outfitMannequinAnalysis = document.getElementById('outfit-mannequin-analysis');
+    
+    function updateOutfitDisplay() {
+        if (!outfits || outfits.length === 0) {
+            console.log('No outfits available');
+            return;
+        }
+        
+        const outfit = outfits[currentOutfitIndex];
+        console.log('Updating display for outfit:', currentOutfitIndex, outfit);
+        
+        // Update counter
+        outfitCounter.textContent = `${currentOutfitIndex + 1} of ${outfits.length}`;
+        
+        // Update buttons
+        prevButton.disabled = currentOutfitIndex === 0;
+        nextButton.disabled = currentOutfitIndex === outfits.length - 1;
+        
+        // Update outfit name
+        outfitName.textContent = outfit.name || `Outfit ${currentOutfitIndex + 1}`;
+        
+        // Update flat-lay image
+        if (outfit.flatlay_image_data) {
+            flatlayImage.src = `data:image/png;base64,${outfit.flatlay_image_data}`;
+            flatlayImage.style.display = 'block';
+            flatlayPlaceholder.style.display = 'none';
+        } else {
+            flatlayImage.style.display = 'none';
+            flatlayPlaceholder.style.display = 'block';
+            flatlayPlaceholder.innerHTML = '<i class="fas fa-image fa-3x mb-2"></i><p>No flat-lay image available</p>';
+        }
+        
+        // Update mannequin image
+        if (outfit.mannequin_image_data) {
+            mannequinImage.src = `data:image/png;base64,${outfit.mannequin_image_data}`;
+            mannequinImage.style.display = 'block';
+            mannequinPlaceholder.style.display = 'none';
+        } else {
+            mannequinImage.style.display = 'none';
+            mannequinPlaceholder.style.display = 'block';
+            mannequinPlaceholder.innerHTML = '<i class="fas fa-user fa-3x mb-2"></i><p>No mannequin image available</p>';
+        }
+        
+        // Update outfit items
+        let itemsHtml = '';
+        if (outfit.tops && outfit.tops.length > 0) {
+            itemsHtml += '<div class="mb-2"><strong>Tops:</strong><ul class="list-unstyled mb-0">';
+            outfit.tops.forEach(top => {
+                itemsHtml += `<li><i class="fas fa-tshirt me-2"></i>${top.name} (${top.color})</li>`;
+            });
+            itemsHtml += '</ul></div>';
+        }
+        
+        if (outfit.bottoms && outfit.bottoms.length > 0) {
+            itemsHtml += '<div class="mb-2"><strong>Bottoms:</strong><ul class="list-unstyled mb-0">';
+            outfit.bottoms.forEach(bottom => {
+                itemsHtml += `<li><i class="fas fa-socks me-2"></i>${bottom.name} (${bottom.color})</li>`;
+            });
+            itemsHtml += '</ul></div>';
+        }
+        
+        if (outfit.shoes && outfit.shoes.length > 0) {
+            itemsHtml += '<div class="mb-2"><strong>Shoes:</strong><ul class="list-unstyled mb-0">';
+            outfit.shoes.forEach(shoe => {
+                itemsHtml += `<li><i class="fas fa-shoe-prints me-2"></i>${shoe.name} (${shoe.color})</li>`;
+            });
+            itemsHtml += '</ul></div>';
+        }
+        
+        if (outfit.accessories && outfit.accessories.length > 0) {
+            itemsHtml += '<div class="mb-2"><strong>Accessories:</strong><ul class="list-unstyled mb-0">';
+            outfit.accessories.forEach(accessory => {
+                itemsHtml += `<li><i class="fas fa-gem me-2"></i>${accessory.name} (${accessory.color})</li>`;
+            });
+            itemsHtml += '</ul></div>';
+        }
+        
+        if (outfit.outerwear && outfit.outerwear.length > 0) {
+            itemsHtml += '<div class="mb-2"><strong>Outerwear:</strong><ul class="list-unstyled mb-0">';
+            outfit.outerwear.forEach(outer => {
+                itemsHtml += `<li><i class="fas fa-vest me-2"></i>${outer.name} (${outer.color})</li>`;
+            });
+            itemsHtml += '</ul></div>';
+        }
+        
+        if (outfit.dresses && outfit.dresses.length > 0) {
+            itemsHtml += '<div class="mb-2"><strong>Dresses:</strong><ul class="list-unstyled mb-0">';
+            outfit.dresses.forEach(dress => {
+                itemsHtml += `<li><i class="fas fa-female me-2"></i>${dress.name} (${dress.color})</li>`;
+            });
+            itemsHtml += '</ul></div>';
+        }
+        
+        outfitItems.innerHTML = itemsHtml || '<p class="text-muted">No items details available</p>';
+        
+        // Update outfit analysis
+        if (outfit.style_description) {
+            outfitAnalysis.innerHTML = `
+                <div class="mb-2">
+                    <strong>Style Description:</strong> ${outfit.style_description}
+                </div>
+                <div class="mb-2">
+                    <strong>Color Scheme:</strong> ${outfit.color_scheme ? outfit.color_scheme.join(', ') : 'N/A'}
+                </div>
+                <div class="mb-2">
+                    <strong>Style Tags:</strong> 
+                    ${outfit.style_tags ? outfit.style_tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('') : 'N/A'}
+                </div>
+                <div class="mb-2">
+                    <strong>Confidence Score:</strong> 
+                    <span class="badge ${outfit.confidence_score > 0.7 ? 'bg-success' : outfit.confidence_score > 0.4 ? 'bg-warning' : 'bg-danger'}">
+                        ${Math.round(outfit.confidence_score * 100)}%
+                    </span>
+                </div>
+            `;
+        } else {
+            outfitAnalysis.innerHTML = '<p class="text-muted">No analysis available for this outfit</p>';
+        }
+        
+        // Update mannequin analysis
+        if (outfit.mannequin_analysis) {
+            outfitMannequinAnalysis.innerHTML = `<strong>Mannequin Analysis:</strong> ${outfit.mannequin_analysis}`;
+        } else {
+            outfitMannequinAnalysis.innerHTML = '';
+        }
+    }
+    
+    // Event listeners
+    if (prevButton) {
+        prevButton.addEventListener('click', function() {
+            console.log('Previous button clicked, current index:', currentOutfitIndex);
+            if (currentOutfitIndex > 0) {
+                currentOutfitIndex--;
+                updateOutfitDisplay();
+            }
+        });
+    } else {
+        console.error('Previous button not found');
+    }
+    
+    if (nextButton) {
+        nextButton.addEventListener('click', function() {
+            console.log('Next button clicked, current index:', currentOutfitIndex);
+            if (currentOutfitIndex < outfits.length - 1) {
+                currentOutfitIndex++;
+                updateOutfitDisplay();
+            }
+        });
+    } else {
+        console.error('Next button not found');
+    }
+    
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (outfits.length === 0) return;
+        
+        if (e.key === 'ArrowLeft' && currentOutfitIndex > 0) {
+            currentOutfitIndex--;
+            updateOutfitDisplay();
+        } else if (e.key === 'ArrowRight' && currentOutfitIndex < outfits.length - 1) {
+            currentOutfitIndex++;
+            updateOutfitDisplay();
+        }
+    });
+    
+    // Add form submission debugging
+    const form = document.getElementById('outfit-search-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('Form submitted with data:');
+            const formData = new FormData(form);
+            for (let [key, value] of formData.entries()) {
+                console.log(key, ':', value);
+            }
+        });
+    }
+    
+    // Initialize display
+    if (outfits && outfits.length > 0) {
+        console.log('Initializing display with', outfits.length, 'outfits');
+        updateOutfitDisplay();
+    } else {
+        console.log('No outfits to display');
+        
+        // Test with dummy data if no outfits
+        if (outfits && outfits.length === 0) {
+            console.log('Testing with dummy data...');
+            const testOutfit = {
+                name: 'Test Outfit',
+                flatlay_image_data: null,
+                mannequin_image_data: null,
+                tops: [{name: 'Test Shirt', color: 'blue'}],
+                bottoms: [{name: 'Test Pants', color: 'black'}],
+                style_description: 'Test outfit description',
+                color_scheme: ['blue', 'black'],
+                style_tags: ['casual', 'test'],
+                confidence_score: 0.8
+            };
+            outfits.push(testOutfit);
+            updateOutfitDisplay();
+        } else {
+            // Hide the slider if no outfits
+            const sliderContainer = document.querySelector('.outfit-slider-container');
+            if (sliderContainer) {
+                sliderContainer.style.display = 'none';
+            }
+        }
+    }
+    
     // Save outfit functionality
     document.querySelectorAll('.save-outfit').forEach(button => {
         button.addEventListener('click', function() {

@@ -564,44 +564,40 @@ class OutfitRecommendationView(LoginRequiredMixin, View):
                 
                 if result['success']:
                     outfits = result['outfits']
-                    composite_image_data = result.get('composite_image_data')
-                    mannequin_image_data = result.get('mannequin_image_data')
                     overall_analysis = result.get('overall_analysis')
                     
                     # Debug logging
                     logger.info(f"Result keys: {result.keys()}")
-                    logger.info(f"Composite image data present: {composite_image_data is not None}")
-                    logger.info(f"Mannequin image data present: {mannequin_image_data is not None}")
+                    logger.info(f"Generated {len(outfits)} outfits with individual images")
                     
-                    if composite_image_data:
-                        import base64
-                        composite_image_data = base64.b64encode(composite_image_data).decode('utf-8')
-                        logger.info("Composite image data encoded successfully")
-                    
-                    if mannequin_image_data:
-                        import base64
-                        mannequin_image_data = base64.b64encode(mannequin_image_data).decode('utf-8')
-                        logger.info("Mannequin image data encoded successfully")
-                    else:
-                        logger.warning("No mannequin image data received")
+                    # Log image data status for each outfit
+                    for i, outfit in enumerate(outfits):
+                        has_flatlay = outfit.get('flatlay_image_data') is not None
+                        has_mannequin = outfit.get('mannequin_image_data') is not None
+                        logger.info(f"Outfit {i+1}: name={outfit.get('name', 'Unknown')}, flatlay={has_flatlay}, mannequin={has_mannequin}")
+                        logger.info(f"Outfit {i+1} keys: {list(outfit.keys())}")
                     
                     messages.success(request, f'Generated {len(outfits)} outfit recommendations!')
                 else:
+                    logger.error(f"Outfit generation failed: {result['error']}")
                     messages.error(request, result['error'])
                     
             except Exception as e:
                 logger.error(f"Error generating outfit recommendations: {e}")
                 messages.error(request, 'Error generating outfit recommendations. Please try again.')
         
+        # Convert outfits to JSON for JavaScript consumption
+        import json
+        outfits_json = json.dumps(outfits, default=str) if outfits else '[]'
+        logger.info(f"Outfits JSON length: {len(outfits_json)}")
+        logger.info(f"First 500 chars of outfits JSON: {outfits_json[:500]}")
+        
         context = {
             'search_form': search_form,
             'outfits': outfits,
-            'composite_image_data': composite_image_data,
-            'mannequin_image_data': mannequin_image_data,
+            'outfits_json': outfits_json,
             'overall_analysis': overall_analysis,
         }
-
-        print('mannequin_image_data', mannequin_image_data)
         
         return render(request, 'imageprocessor/outfit_recommendations.html', context)
     
