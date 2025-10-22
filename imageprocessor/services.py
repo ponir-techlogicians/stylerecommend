@@ -28,6 +28,7 @@ from typing import List
 import asyncio
 import concurrent.futures
 import time
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
@@ -761,22 +762,32 @@ Respond in JSON format:
             
             # Create outfit combinations
             outfits = []
+            used_shoes = set()
+            used_accessories = set()
+            used_outerwear = set()
             
             # Generate dress outfits
             for dress in dresses:
                 outfit_items = [dress]
                 
-                # Add shoes
-                if shoes.exists():
-                    outfit_items.append(shoes.first())
+                # Add random shoes (avoid duplicates if possible)
+                random_shoe = self._get_random_item(shoes, avoid_duplicates=used_shoes)
+                if random_shoe:
+                    outfit_items.append(random_shoe)
+                    used_shoes.add(random_shoe.id)
                 
-                # Add accessories
-                if accessories.exists():
-                    outfit_items.append(accessories.first())
+                # Add random accessories (avoid duplicates if possible)
+                random_accessory = self._get_random_item(accessories, avoid_duplicates=used_accessories)
+                if random_accessory:
+                    outfit_items.append(random_accessory)
+                    used_accessories.add(random_accessory.id)
                 
-                # Add outerwear if needed
-                if outerwear.exists() and season in ['fall', 'winter']:
-                    outfit_items.append(outerwear.first())
+                # Add random outerwear if needed
+                if season in ['fall', 'winter']:
+                    random_outerwear = self._get_random_item(outerwear, avoid_duplicates=used_outerwear)
+                    if random_outerwear:
+                        outfit_items.append(random_outerwear)
+                        used_outerwear.add(random_outerwear.id)
                 
                 outfits.append(self._create_outfit_from_items(
                     outfit_items, occasion, season, f"Elegant {dress.color} Dress"
@@ -787,17 +798,24 @@ Respond in JSON format:
                 for bottom in bottoms:
                     outfit_items = [top, bottom]
                     
-                    # Add shoes
-                    if shoes.exists():
-                        outfit_items.append(shoes.first())
+                    # Add smart random shoes (avoid duplicates if possible)
+                    random_shoe = self._get_smart_random_item(shoes, base_item=top, avoid_duplicates=used_shoes)
+                    if random_shoe:
+                        outfit_items.append(random_shoe)
+                        used_shoes.add(random_shoe.id)
                     
-                    # Add accessories
-                    if accessories.exists():
-                        outfit_items.append(accessories.first())
+                    # Add smart random accessories (avoid duplicates if possible)
+                    random_accessory = self._get_smart_random_item(accessories, base_item=top, avoid_duplicates=used_accessories)
+                    if random_accessory:
+                        outfit_items.append(random_accessory)
+                        used_accessories.add(random_accessory.id)
                     
-                    # Add outerwear if needed
-                    if outerwear.exists() and season in ['fall', 'winter']:
-                        outfit_items.append(outerwear.first())
+                    # Add random outerwear if needed
+                    if season in ['fall', 'winter']:
+                        random_outerwear = self._get_random_item(outerwear, avoid_duplicates=used_outerwear)
+                        if random_outerwear:
+                            outfit_items.append(random_outerwear)
+                            used_outerwear.add(random_outerwear.id)
                     
                     outfit_name = f"{top.color.title()} {top.category.title()} & {bottom.color.title()} {bottom.category.title()}"
                     outfits.append(self._create_outfit_from_items(
@@ -810,13 +828,19 @@ Respond in JSON format:
                 for item in filtered_items:
                     outfit_items = [item]
                     
-                    # Add shoes if available and not already a shoe
-                    if shoes.exists() and item.category != 'shoes':
-                        outfit_items.append(shoes.first())
+                    # Add smart random shoes if available and not already a shoe
+                    if item.category != 'shoes':
+                        random_shoe = self._get_smart_random_item(shoes, base_item=item, avoid_duplicates=used_shoes)
+                        if random_shoe:
+                            outfit_items.append(random_shoe)
+                            used_shoes.add(random_shoe.id)
                     
-                    # Add accessories if available and not already an accessory
-                    if accessories.exists() and item.category != 'accessories':
-                        outfit_items.append(accessories.first())
+                    # Add smart random accessories if available and not already an accessory
+                    if item.category != 'accessories':
+                        random_accessory = self._get_smart_random_item(accessories, base_item=item, avoid_duplicates=used_accessories)
+                        if random_accessory:
+                            outfit_items.append(random_accessory)
+                            used_accessories.add(random_accessory.id)
                     
                     outfit_name = f"Stylish {item.color.title()} {item.category.title()}"
                     outfits.append(self._create_outfit_from_items(
@@ -909,6 +933,102 @@ Respond in JSON format:
             'outerwear': [item for item in items if item.category == 'outerwear'],
             'dresses': [item for item in items if item.category == 'dress'],
         }
+    
+    def _get_random_item(self, queryset, max_items=1, avoid_duplicates=None):
+        """Get a random item(s) from a queryset with optional duplicate avoidance"""
+        if not queryset.exists():
+            return None if max_items == 1 else []
+        
+        count = queryset.count()
+        if count == 0:
+            return None if max_items == 1 else []
+        
+        # If we want more items than available, return all
+        if max_items >= count:
+            return list(queryset.all())
+        
+        # Get all items
+        items = list(queryset.all())
+        
+        # If we need to avoid duplicates, filter out already used items
+        if avoid_duplicates:
+            available_items = [item for item in items if item.id not in avoid_duplicates]
+            if not available_items:
+                # If no unique items left, fall back to all items
+                available_items = items
+        else:
+            available_items = items
+        
+        # Ensure we don't try to select more items than available
+        actual_max = min(max_items, len(available_items))
+        if actual_max == 0:
+            return None if max_items == 1 else []
+        
+        # Get random indices
+        random_indices = random.sample(range(len(available_items)), actual_max)
+        selected_items = [available_items[i] for i in random_indices]
+        
+        return selected_items[0] if max_items == 1 and selected_items else selected_items
+    
+    def _get_smart_random_item(self, queryset, base_item=None, avoid_duplicates=None, max_items=1):
+        """Get a random item with some intelligence for better coordination"""
+        if not queryset.exists():
+            return None if max_items == 1 else []
+        
+        items = list(queryset.all())
+        
+        # If we need to avoid duplicates, filter out already used items
+        if avoid_duplicates:
+            available_items = [item for item in items if item.id not in avoid_duplicates]
+            if not available_items:
+                available_items = items
+        else:
+            available_items = items
+        
+        if not available_items:
+            return None if max_items == 1 else []
+        
+        # If we have a base item, try to find items that coordinate well
+        if base_item and len(available_items) > 1:
+            # Simple color coordination logic
+            base_color = base_item.color.lower()
+            color_matches = []
+            neutral_colors = ['black', 'white', 'gray', 'navy', 'beige', 'cream']
+            
+            for item in available_items:
+                item_color = item.color.lower()
+                # Prefer neutral colors or complementary colors
+                if (item_color in neutral_colors or 
+                    item_color == base_color or
+                    self._are_colors_complementary(base_color, item_color)):
+                    color_matches.append(item)
+            
+            # If we found good color matches, use them; otherwise use all available
+            if color_matches:
+                available_items = color_matches
+        
+        # Ensure we don't try to select more items than available
+        actual_max = min(max_items, len(available_items))
+        if actual_max == 0:
+            return None if max_items == 1 else []
+        
+        # Get random indices
+        random_indices = random.sample(range(len(available_items)), actual_max)
+        selected_items = [available_items[i] for i in random_indices]
+        
+        return selected_items[0] if max_items == 1 and selected_items else selected_items
+    
+    def _are_colors_complementary(self, color1, color2):
+        """Simple color complementarity check"""
+        color_pairs = [
+            ('red', 'green'), ('blue', 'orange'), ('yellow', 'purple'),
+            ('pink', 'mint'), ('navy', 'coral'), ('black', 'white')
+        ]
+        
+        for pair in color_pairs:
+            if (color1 in pair and color2 in pair) or (color2 in pair and color1 in pair):
+                return True
+        return False
     
     def _process_single_outfit(self, outfit_data):
         """Process a single outfit to generate flat-lay and mannequin images"""
